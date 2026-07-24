@@ -1,15 +1,17 @@
 const express =require('express');
-const app = express();
 const bcrypt = require('bcrypt');
-const PORT = 3000;
-const users = [];
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+
+const app = express();
+const PORT = 3000;
 app.use(express.json());
+ //임시 DB변수
+const users = [];
 
 
 
-
+//회원가입 - POST /signup - body: {email, password }
 app.post('/signup', async (req, res) => {
     const { email, password } = req.body;
     
@@ -26,7 +28,7 @@ app.post('/signup', async (req, res) => {
     console.log('현재 유저 목록:', users);
     res.status(201).json({message: '회원가입 성공!', user: newUser });
 });
-
+//로그인 - POST /login - body: { email, password }
 app.post('/login', async (req, res) => {
     const {email, password} = req.body;
 
@@ -43,22 +45,25 @@ app.post('/login', async (req, res) => {
     const token = jwt.sign(
         { email: user.email },
         process.env.JWT_SECRET,
-        { expiresIn: '1h' }
+        { expiresIn: '1h' } 
     );
 
     res.status(200).json({message: '로그인 성공!', token });
 });
 
+// ===== 테스트/연습용 라우트 =====
+//서버 생존 텍스트
 app.get('/', (req, res) =>{
     res.send('서버가 살아있다!');
 });
 
-
+//화면에 안녕, {}출력
 app.get('/hello/:name', (req, res) => {
     const name = req.params.name;
     res.send(`안녕, ${name}!`);
 });
 
+//캐릭터 기본값 설정
 app.get('/character', (req, res) => {
     res.json({
         name: '용사',
@@ -68,6 +73,7 @@ app.get('/character', (req, res) => {
     });
 });
 
+//서버 실행중입니다 텍스트
 app.listen(PORT, () => {
     console.log(`서버 실행중입니다: http://localhost:${PORT}`);
 });
