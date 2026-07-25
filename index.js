@@ -2,41 +2,51 @@ const express =require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+//prisma db 연결 
+const { PrismaClient } = require('@prisma/client');
+const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3');
+
+const adapter = new PrismaBetterSqlite3({
+    url: process.env.DATABASE_URL || 'file:./dev.db',
+});
+const prisma = new PrismaClient({ adapter });
 
 const app = express();
 const PORT = 3000;
 app.use(express.json());
- //임시 DB변수
-const users = [];
 
 
 
 //회원가입 - POST /signup - body: {email, password }
 app.post('/signup', async (req, res) => {
     const { email, password } = req.body;
-    
-    const existingUser = users.find(user => user.email === email);
+    //findunique로 중복 이메일 막기
+    const existingUser = await prisma.user.findUnique({ where: {email } });
     if (existingUser) {
         return res.status(400).json({ message: '이미 존재하는 이메일입니다.' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = { email, password: hashedPassword };
-    users.push(newUser);
-
-    console.log('현재 유저 목록:', users);
+    //DB에 유저 추가
+    const newUser = await prisma.user.create({
+        data: {email, password: hashedPassword },
+    });
+    
+    console.log('새로 생성된 유저:', newUser);
     res.status(201).json({message: '회원가입 성공!', user: newUser });
 });
+
+
 //로그인 - POST /login - body: { email, password }
 app.post('/login', async (req, res) => {
     const {email, password} = req.body;
-
-    const user =users.find(user => user.email === email);
+//DB에서 이메일로 유저 조회
+    const user = await prisma.user.findUnique({ where: { email } });
     if(!user){
         return res.status(401).json({message: '존재하지 않는 이메일입니다.'});
     }
-
+//비밀번호 일치 여부 확인
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) {
         return res.status(401).json({message: '비밀번호가 틀렸습니다.'});
