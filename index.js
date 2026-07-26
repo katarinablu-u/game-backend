@@ -15,7 +15,26 @@ const app = express();
 const PORT = 3000;
 app.use(express.json());
 
-
+//토큰 꺼내옴 + 검증
+function authMiddleware(req, res, next) {
+    //헤더에서 토큰 꺼내기
+    const authHeader = req.headers['authorization'];
+    //꺼내기 실패시 나오는 멘트
+    if (!authHeader){
+        return res.status(401).json({ message: '토큰이 없습니다.' });
+    }
+    
+    const token = authHeader.split(' ')[1];
+    //토큰 검증하기
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
+        next();
+    //검증 실패시 나오는 멘트
+    } catch (err) {
+        return res.status(401).json({ message: '유효하지 않은 토큰입니다.' });
+    }
+}
 
 //회원가입 - POST /signup - body: {email, password }
 app.post('/signup', async (req, res) => {
@@ -73,13 +92,14 @@ app.get('/hello/:name', (req, res) => {
     res.send(`안녕, ${name}!`);
 });
 
-//캐릭터 기본값 설정
-app.get('/character', (req, res) => {
+//캐릭터 기본값 설정 - 로그인(토큰 인증)해야만 접근 가능
+app.get('/character', authMiddleware, (req, res) => {
     res.json({
         name: '용사',
         level: 1,
         hp: 100,
-        exp: 0
+        exp: 0,
+        owner: req.user.email //미들웨어가 붙여준 유저 정보 활용
     });
 });
 
