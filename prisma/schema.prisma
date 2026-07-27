@@ -12,8 +12,19 @@ datasource db {
 }
 
 model User{
-  id          Int @id @default(autoincrement())
-  email       String @unique
+  id          Int       @id @default(autoincrement())
+  email       String    @unique
   password    String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
+  character   Character?
+}
+
+model Character {
+  id     Int   @id @default(autoincrement())
+  name   String
+  level  Int   @default(1)
+  hp     Int   @default(100)
+  exp    Int   @default(0)
+  userId Int   @unique
+  user   User  @relation(fields: [userId], references: [id])
 }

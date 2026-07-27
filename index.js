@@ -72,7 +72,7 @@ app.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-        { email: user.email },
+        { userId: user.id, email: user.email },
         process.env.JWT_SECRET,
         { expiresIn: '1h' } 
     );
@@ -92,16 +92,43 @@ app.get('/hello/:name', (req, res) => {
     res.send(`안녕, ${name}!`);
 });
 
-//캐릭터 기본값 설정 - 로그인(토큰 인증)해야만 접근 가능
-app.get('/character', authMiddleware, (req, res) => {
-    res.json({
-        name: '용사',
-        level: 1,
-        hp: 100,
-        exp: 0,
-        owner: req.user.email //미들웨어가 붙여준 유저 정보 활용
+//캐릭터 조회 -GET /character - 로그인(토큰 인증)해야만 접근 가능
+app.get('/character', authMiddleware, async (req, res) => {
+    //로그인한 유저 본인의 캐릭터 확인
+    const character = await prisma.character.findUnique({
+        where: { userId: req.user.userId }
     });
+    //캐릭터 존재하지 않을시 
+    if (!character) {
+        return res.status(404).json({ message: '캐릭터가 존재하지 않습니다.' });
+    }
+
+    res.json(character);
 });
+
+//캐릭터 생성 - POST /character - 로그인 필요
+app.post('/character', authMiddleware, async (req, res) => {
+    const { name } = req.body;
+
+    //이미 캐릭터 있는지 확인
+    const existingCharacter = await prisma.character.findUnique({
+        where: { userId: req.user.userId }
+    });
+    if (existingCharacter) {
+        return res.status(400).json({ message: '이미 캐릭터가 존재합니다.'});
+    }
+
+    //DB에 캐릭터 생성
+    const newCharacter = await prisma.character.create({
+        data: {
+            name, 
+            userId: req.user.userId
+        }
+    });
+
+    res.status(201).json({ message: '캐릭터 생성 성공!', character: newCharacter });
+});
+
 
 //서버 실행중입니다 텍스트
 app.listen(PORT, () => {
