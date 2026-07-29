@@ -129,6 +129,41 @@ app.post('/character', authMiddleware, async (req, res) => {
     res.status(201).json({ message: '캐릭터 생성 성공!', character: newCharacter });
 });
 
+//경험치 획득 및 레벨업 - POST /character/exp - body: { amount }
+app.post('/character/exp', authMiddleware, async (req, res) => {
+    const { amount } = req.body;
+
+    //본인 캐릭터 조회
+    const character = await prisma.character.findUnique({
+        where: { userId: req.user.userId }
+    });
+    if(!character) {
+        return res.status(404).json({ message: '캐릭터가 존재하지 않습니다.' });
+    }
+    //캐릭터 경험치, 레벨, HP
+    let newExp = character.exp + amount;
+    let newLevel = character.level;
+    let newHp = character.hp;
+    //레벨업에 필요한 경험치
+    const expToLevelUp = character.level * 100;
+    //경험치가 기준을 넘으면 레벨업 
+    if (newExp >= expToLevelUp) {
+        newExp = newExp - expToLevelUp;
+        newLevel = newLevel + 1;
+        newHp = newHp + 20;
+    }
+    //변경된 정보 DB에 저장
+    const updatedCharacter = await prisma.character.update({
+        where: { userId: req.user.userId },
+        data: {
+            exp: newExp,
+            level: newLevel,
+            hp: newHp
+        }
+    });
+    //성공적으로 실행됐을시 멘트
+    res.status(200).json({ message: '경험치 획득!', character: updatedCharacter });
+});
 
 //서버 실행중입니다 텍스트
 app.listen(PORT, () => {
