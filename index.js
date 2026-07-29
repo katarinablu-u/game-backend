@@ -1,3 +1,5 @@
+const cors = require('cors');
+
 const express =require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -14,6 +16,7 @@ const prisma = new PrismaClient({ adapter });
 const app = express();
 const PORT = 3000;
 app.use(express.json());
+app.use(cors());
 
 //토큰 꺼내옴 + 검증
 function authMiddleware(req, res, next) {
